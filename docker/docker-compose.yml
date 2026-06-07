@@ -1,0 +1,104 @@
+version: "3.9"
+
+# Enterprise deployment: 3 prompt-armor replicas behind a single Redis
+# For 500-600 engineers: 3 replicas × 4 workers = 12 worker processes
+# Handles ~40-50 concurrent streaming connections per replica
+
+services:
+  prompt-armor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    image: prompt-armor:latest
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    ports:
+      - "8000-8002:8000"  # Map 3 replicas to host ports 8000-8002
+    environment:
+      # Proxy auth
+      - ARMOR_API_KEY=${ARMOR_API_KEY:-}
+      # Provider keys
+      - ARMOR_OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ARMOR_ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ARMOR_AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - ARMOR_AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - ARMOR_GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ARMOR_GROQ_API_KEY=${GROQ_API_KEY:-}
+      - ARMOR_MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - ARMOR_COHERE_API_KEY=${COHERE_API_KEY:-}
+      - ARMOR_DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - ARMOR_OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      # AWS Bedrock
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - ARMOR_AWS_REGION=${AWS_REGION:-us-east-1}
+      # Infrastructure
+      - ARMOR_REDIS_URL=redis://redis:6379
+      - ARMOR_WORKERS=4
+      - ARMOR_LOG_LEVEL=INFO
+      - ARMOR_AUDIT_LOG_PATH=/var/log/prompt-armor/audit.jsonl
+    volumes:
+      - audit_logs:/var/log/prompt-armor
+      - ./config:/app/config:ro  # Company YAML config
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: prompt-armor-redis
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Local Ollama — only starts with: docker compose --profile ollama up
+  ollama:
+    image: ollama/ollama:latest
+    container_name: prompt-armor-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  audit_logs:
+  redis_data:
+  ollama_data:
+
+# To build and push multi-arch image:
+# docker buildx build --platform linux/amd64,linux/arm64 \
+#   -t ghcr.io/santhana11/prompt-armor:latest \
+#   -f docker/Dockerfile . --push

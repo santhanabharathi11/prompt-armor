@@ -1,0 +1,70 @@
+# prompt-armor company configuration
+# Commit this file to your repo (do NOT put secrets here — use .env for keys)
+# Restart prompt-armor after changes
+
+company:
+  name: "Acme Corp"
+
+  # Internal email domains — emails @these domains get blocked
+  internal_domains:
+    - "acmecorp.com"
+    - "acme.internal"
+    # Add more: "subsidiary.com", "acquired-company.com"
+
+  # AWS Account IDs (12-digit) — any occurrence in prompts is blocked
+  aws_account_ids:
+    - "123456789012"
+    - "987654321098"
+    # prod, staging, dev accounts
+
+  # GCP Project IDs
+  gcp_project_ids:
+    - "acme-prod-project"
+    - "acme-staging-001"
+
+  # Azure Subscription IDs (UUID format)
+  azure_subscription_ids:
+    - "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+  # Employee ID regex — match your format
+  # Examples:
+  #   "EMP-\\d{5}"       →  EMP-00123
+  #   "ACM\\d{6}"        →  ACM001234
+  #   "E-[0-9]{4}"       →  E-4521
+  employee_id_pattern: "EMP-\\d{5}"
+
+  # Customer account ID regex — match your CRM format
+  # Examples:
+  #   "ACC-[A-Z0-9]{8}"  →  ACC-XY123456
+  #   "CUST_\\d{6}"      →  CUST_001234
+  customer_account_pattern: "ACC-[A-Z0-9]{8}"
+
+  # Keywords to always block (case-insensitive, word boundary match)
+  # Use for codenames, unreleased product names, sensitive project names
+  blocked_keywords:
+    - "Project Phoenix"
+    - "Operation Titan"
+    - "board resolution"
+    - "acquisition target"
+    - "term sheet"
+    - "board approved"
+    # Add your unreleased product codenames, M&A targets, etc.
+
+  # Custom regex patterns for company-specific data formats
+  custom_patterns:
+    - pattern: "INV-\\d{4}-[A-Z]{2}-\\d{4}"
+      label: "Invoice Number"
+      severity: "medium"
+
+    - pattern: "TKT-[0-9]{6}"
+      label: "Support Ticket ID"
+      severity: "low"
+
+    - pattern: "PR-[0-9]{5}"
+      label: "Payroll Reference"
+      severity: "high"
+
+    # Example: internal Jira ticket pattern
+    # - pattern: "ACME-\\d+"
+    #   label: "Internal Jira Ticket"
+    #   severity: "medium"
