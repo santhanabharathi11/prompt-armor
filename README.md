@@ -2,7 +2,6 @@
 
 > Self-hosted LLM firewall proxy. Drop-in security layer for any LLM API — runs entirely in your VPC.
 
-[![CI](https://github.com/santhana11/prompt-armor/actions/workflows/ci.yml/badge.svg)](https://github.com/santhana11/prompt-armor/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![Providers](https://img.shields.io/badge/providers-10-green)](#supported-providers)
